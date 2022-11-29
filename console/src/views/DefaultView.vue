@@ -2,149 +2,131 @@
 A fully spec-compliant TodoMVC implementation
 https://todomvc.com/
 -->
-
-<script>
+<script setup lang="ts">
 import axios from "axios";
-
-const STORAGE_KEY = "vue-todomvc";
+import type { Todo, TodoList } from "../types";
+import { computed, onMounted, ref } from "vue";
 
 const http = axios.create({
   baseURL: "/",
   timeout: 1000,
 });
 
-const createTodo = async (title) => {
-  return await http.post("/apis/todo.guqing.github.io/v1alpha1/todos", {
-    spec: {
-      title: title,
-      done: false,
-    },
-    apiVersion: "todo.guqing.github.io/v1alpha1",
-    kind: "Todo",
-    metadata: {
-      generateName: "todo-",
-    },
-  });
+interface Tab {
+  label: string;
+}
+
+const todos = ref<TodoList>({
+  page: 1,
+  size: 20,
+  total: 0,
+  items: [],
+  first: true,
+  last: false,
+  hasNext: false,
+  hasPrevious: false,
+  totalPages: 0,
+});
+
+const tabs = [
+  {
+    label: "All",
+  },
+  {
+    label: "Active",
+  },
+  {
+    label: "Completed",
+  },
+];
+
+const activeTab = ref("All");
+
+/**
+ * 列表展示的数据
+ */
+const todoList = computed(() => {
+  if (activeTab.value === "All") {
+    return todos.value.items;
+  }
+  if (activeTab.value === "Active") {
+    return getByDone(false);
+  }
+  if (activeTab.value === "Completed") {
+    return getByDone(true);
+  }
+  return [];
+});
+
+const getByDone = (done: boolean) => {
+  return todos.value.items.filter((todo) => todo.spec.done === done);
 };
 
-const getTodo = async (name) => {
-  return await http.get(`/apis/todo.guqing.github.io/v1alpha1/todos/${name}`);
-};
+function handleFetchTodos() {
+  http
+    .get<TodoList>("/apis/todo.guqing.github.io/v1alpha1/todos")
+    .then((response) => {
+      todos.value = response.data;
+    });
+}
 
-const listAllTodos = async () => {
-  return await http.get("/apis/todo.guqing.github.io/v1alpha1/todos");
-};
+onMounted(handleFetchTodos);
 
-const updateDoneStatus = async (name, done) => {
-  const todoItem = await getTodo(name);
-  todoItem.spec.done = done;
-  return await http.put(
-    `/apis/todo.guqing.github.io/v1alpha1/todos/${name}`,
-    todoItem
-  );
-};
+// 创建的逻辑
 
-const removeTodo = async (name) => {
-  return await http.delete(
-    `/apis/todo.guqing.github.io/v1alpha1/todos/${name}`
-  );
-};
+const title = ref("");
 
-const filters = {
-  all: (todos) => todos,
-  active: (todos) => todos.filter((todo) => !todo.completed),
-  completed: (todos) => todos.filter((todo) => todo.completed),
-};
-
-export default {
-  // app initial state
-  data: () => ({
-    todos: [],
-    editedTodo: null,
-    visibility: "all",
-  }),
-
-  // watch todos change for localStorage persistence
-  watch: {
-    todos: {
-      handler(todos) {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
+function handleCreate(e: Event) {
+  http
+    .post<Todo>("/apis/todo.guqing.github.io/v1alpha1/todos", {
+      metadata: {
+        generateName: "todo-",
       },
-      deep: true,
-    },
-  },
-  computed: {
-    filteredTodos() {
-      return filters[this.visibility](this.todos);
-    },
-    remaining() {
-      return filters.active(this.todos).length;
-    },
-  },
-  async mounted() {
-    await this.listAll();
-  },
-  // methods that implement data logic.
-  // note there's no DOM manipulation here at all.
-  methods: {
-    async listAll() {
-      const list = await listAllTodos();
-      this.todos = list.data.items.map((item) => {
-        return {
-          id: item.metadata.name,
-          title: item.spec.title,
-        };
-      });
-    },
+      spec: {
+        title: title.value,
+        done: false,
+      },
+      kind: "Todo",
+      apiVersion: "todo.guqing.github.io/v1alpha1",
+    })
+    .then((response) => {
+      title.value = "";
+      handleFetchTodos();
+    });
+}
 
-    toggleAll(e) {
-      this.todos.forEach((todo) => (todo.completed = e.target.checked));
-    },
+// 更新的逻辑
+const selectedTodo = ref<Todo | undefined>();
+const handleUpdate = () => {
+  http
+    .put<Todo>(
+      `/apis/todo.guqing.github.io/v1alpha1/todos/${selectedTodo.value?.metadata.name}`,
+      selectedTodo.value
+    )
+    .then((response) => {
+      handleFetchTodos();
+    });
+};
 
-    async addTodo(e) {
-      const value = e.target.value.trim();
-      if (!value) {
-        return;
-      }
-      const result = await createTodo(value);
-      this.todos.push({
-        id: result.metadata.name,
-        title: result.spec.title,
-        completed: result.spec.done,
-      });
-      e.target.value = "";
-    },
+function handleDoneChange(todo: Todo) {
+  todo.spec.done = !todo.spec.done;
+  http
+    .put<Todo>(
+      `/apis/todo.guqing.github.io/v1alpha1/todos/${todo.metadata.name}`,
+      todo
+    )
+    .then((response) => {
+      handleFetchTodos();
+    });
+}
 
-    async removeTodo(todo) {
-      await removeTodo(todo.id);
-      await this.listAll();
-    },
-
-    editTodo(todo) {
-      this.beforeEditCache = todo.title;
-      this.editedTodo = todo;
-    },
-
-    async doneEdit(todo) {
-      if (!this.editedTodo) {
-        return;
-      }
-      this.editedTodo = null;
-      todo.title = todo.title.trim();
-      if (!todo.title) {
-        return await updateDoneStatus(todo.id, true);
-      }
-    },
-
-    cancelEdit(todo) {
-      this.editedTodo = null;
-      todo.title = this.beforeEditCache;
-    },
-
-    async removeCompleted() {
-      this.todos = filters.active(this.todos);
-    },
-  },
+// 删除
+const handleDelete = (todo: Todo) => {
+  http
+    .delete(`/apis/todo.guqing.github.io/v1alpha1/todos/${todo.metadata.name}`)
+    .then((response) => {
+      handleFetchTodos();
+    });
 };
 </script>
 
@@ -155,81 +137,71 @@ export default {
       <input
         class="new-todo"
         autofocus
+        v-model="title"
         placeholder="What needs to be done?"
-        @keyup.enter="addTodo"
+        @keyup.enter="handleCreate"
       />
     </header>
-    <section class="main" v-show="todos.length">
+    <section class="main" v-show="todos.items.length">
       <input
         id="toggle-all"
         class="toggle-all"
         type="checkbox"
-        :checked="remaining === 0"
-        @change="toggleAll"
+        :checked="getByDone(false).length > 0"
       />
       <label for="toggle-all">Mark all as complete</label>
       <ul class="todo-list">
         <li
-          v-for="todo in filteredTodos"
+          v-for="(todo, index) in todoList"
           class="todo"
-          :key="todo.id"
-          :class="{ completed: todo.completed, editing: todo === editedTodo }"
+          :key="index"
+          :class="{ completed: todo.spec.done, editing: todo === selectedTodo }"
         >
           <div class="view">
-            <input class="toggle" type="checkbox" v-model="todo.completed" />
-            <label @dblclick="editTodo(todo)">{{ todo.title }}</label>
-            <button class="destroy" @click="removeTodo(todo)"></button>
+            <input
+              class="toggle"
+              type="checkbox"
+              :checked="todo.spec.done"
+              @click="handleDoneChange(todo)"
+            />
+            <label @dblclick="selectedTodo = todo">{{ todo.spec.title }}</label>
+            <button class="destroy" @click="handleDelete(todo)"></button>
           </div>
           <input
-            v-if="todo === editedTodo"
+            v-if="selectedTodo"
             class="edit"
             type="text"
-            v-model="todo.title"
+            v-model="selectedTodo.spec.title"
             @vnode-mounted="({ el }) => el.focus()"
-            @blur="doneEdit(todo)"
-            @keyup.enter="doneEdit(todo)"
-            @keyup.escape="cancelEdit(todo)"
+            @blur="handleUpdate()"
+            @keyup.enter="handleUpdate()"
+            @keyup.escape="selectedTodo = undefined"
           />
         </li>
       </ul>
     </section>
-    <footer class="footer" v-show="todos.length">
+    <footer class="footer" v-show="todos.total">
       <span class="todo-count">
-        <strong>{{ remaining }}</strong>
-        <span>{{ remaining === 1 ? " item" : " items" }} left</span>
+        <strong>{{ getByDone(false).length > 0 }}</strong>
+        <span>
+          {{ getByDone(false).length === 1 ? " item" : " items" }} left</span
+        >
       </span>
       <ul class="filters">
-        <li>
+        <li v-for="(tab, index) in tabs" :key="index">
           <a
             href="javascript:void(0);"
-            @click="() => (this.visibility = 'all')"
-            :class="{ selected: visibility === 'all' }"
-            >All</a
+            @click="activeTab = tab.label"
+            :class="{ selected: activeTab === tab.label }"
           >
-        </li>
-        <li>
-          <a
-            href="javascript:void(0);"
-            @click="() => (this.visibility = 'active')"
-            :class="{ selected: visibility === 'active' }"
-          >
-            Active
-          </a>
-        </li>
-        <li>
-          <a
-            href="javascript:void(0);"
-            @click="() => (this.visibility = 'completed')"
-            :class="{ selected: visibility === 'completed' }"
-          >
-            Completed
+            {{ tab.label }}
           </a>
         </li>
       </ul>
       <button
         class="clear-completed"
-        @click="removeCompleted"
-        v-show="todos.length > remaining"
+        @click="() => {}"
+        v-show="todos.items.length > getByDone(false).length"
       >
         Clear completed
       </button>
