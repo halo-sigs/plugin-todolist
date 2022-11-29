@@ -7,5 +7,6 @@ pluginManagement {
         gradlePluginPortal()
     }
 }
-rootProject.name = 'plugin-starter'
+// 项目名称
+rootProject.name = 'halo-plugin-hello-world'
 
