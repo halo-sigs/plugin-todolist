@@ -13,6 +13,8 @@
   "dependencies": {
     "@halo-dev/components": "^0.0.0-alpha.5",
     "@halo-dev/console-shared": "^2.0.0-alpha.3",
+    "axios": "^1.2.0",
+    "todomvc-app-css": "^2.4.2",
     "vue": "^3.2.41"
   },
   "devDependencies": {
