@@ -1,4 +1,4 @@
-package io.github.guqing;
+package run.halo.tutorial;
 
 import org.pf4j.PluginWrapper;
 import org.springframework.stereotype.Component;

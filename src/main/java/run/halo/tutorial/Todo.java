@@ -1,4 +1,4 @@
-package io.github.guqing;
+package run.halo.tutorial;
 
 import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
 
@@ -14,7 +14,7 @@ import run.halo.app.extension.GVK;
  */
 @Data
 @EqualsAndHashCode(callSuper = true)
-@GVK(kind = "Todo", group = "todo.guqing.github.io",
+@GVK(kind = "Todo", group = "todo.plugin.halo.run",
     version = "v1alpha1", singular = "todo", plural = "todos")
 public class Todo extends AbstractExtension {
 

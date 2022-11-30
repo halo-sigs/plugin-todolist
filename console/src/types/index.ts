@@ -18,7 +18,7 @@ export interface TodoSpec {
 
 export interface Todo {
   spec: TodoSpec;
-  apiVersion: "todo.guqing.github.io/v1alpha1";
+  apiVersion: "todo.plugin.halo.run/v1alpha1";
   kind: "Todo";
   metadata: Metadata;
 }

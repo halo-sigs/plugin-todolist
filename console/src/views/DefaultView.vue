@@ -1,7 +1,3 @@
-<!--
-A fully spec-compliant TodoMVC implementation
-https://todomvc.com/
--->
 <script setup lang="ts">
 import axios from "axios";
 import type { Todo, TodoList } from "../types";
@@ -50,21 +46,22 @@ const todoList = computed(() => {
     return todos.value.items;
   }
   if (activeTab.value === "Active") {
-    return getByDone(false);
+    return filterByDone(false);
   }
   if (activeTab.value === "Completed") {
-    return getByDone(true);
+    return filterByDone(true);
   }
   return [];
 });
 
-const getByDone = (done: boolean) => {
+const filterByDone = (done: boolean) => {
   return todos.value.items.filter((todo) => todo.spec.done === done);
 };
 
+// 查看 http://localhost:8090/swagger-ui.html
 function handleFetchTodos() {
   http
-    .get<TodoList>("/apis/todo.guqing.github.io/v1alpha1/todos")
+    .get<TodoList>("/apis/todo.plugin.halo.run/v1alpha1/todos")
     .then((response) => {
       todos.value = response.data;
     });
@@ -78,8 +75,9 @@ const title = ref("");
 
 function handleCreate(e: Event) {
   http
-    .post<Todo>("/apis/todo.guqing.github.io/v1alpha1/todos", {
+    .post<Todo>("/apis/todo.plugin.halo.run/v1alpha1/todos", {
       metadata: {
+        // 根据 'todo-' 前缀自动生成 todo 的名称作为唯一标识，可以理解为数据库自动生成主键 id
         generateName: "todo-",
       },
       spec: {
@@ -87,7 +85,7 @@ function handleCreate(e: Event) {
         done: false,
       },
       kind: "Todo",
-      apiVersion: "todo.guqing.github.io/v1alpha1",
+      apiVersion: "todo.plugin.halo.run/v1alpha1",
     })
     .then((response) => {
       title.value = "";
@@ -100,7 +98,7 @@ const selectedTodo = ref<Todo | undefined>();
 const handleUpdate = () => {
   http
     .put<Todo>(
-      `/apis/todo.guqing.github.io/v1alpha1/todos/${selectedTodo.value?.metadata.name}`,
+      `/apis/todo.plugin.halo.run/v1alpha1/todos/${selectedTodo.value?.metadata.name}`,
       selectedTodo.value
     )
     .then((response) => {
@@ -112,7 +110,7 @@ function handleDoneChange(todo: Todo) {
   todo.spec.done = !todo.spec.done;
   http
     .put<Todo>(
-      `/apis/todo.guqing.github.io/v1alpha1/todos/${todo.metadata.name}`,
+      `/apis/todo.plugin.halo.run/v1alpha1/todos/${todo.metadata.name}`,
       todo
     )
     .then((response) => {
@@ -123,7 +121,7 @@ function handleDoneChange(todo: Todo) {
 // 删除
 const handleDelete = (todo: Todo) => {
   http
-    .delete(`/apis/todo.guqing.github.io/v1alpha1/todos/${todo.metadata.name}`)
+    .delete(`/apis/todo.plugin.halo.run/v1alpha1/todos/${todo.metadata.name}`)
     .then((response) => {
       handleFetchTodos();
     });
@@ -147,7 +145,7 @@ const handleDelete = (todo: Todo) => {
         id="toggle-all"
         class="toggle-all"
         type="checkbox"
-        :checked="getByDone(false).length > 0"
+        :checked="filterByDone(false).length > 0"
       />
       <label for="toggle-all">Mark all as complete</label>
       <ul class="todo-list">
@@ -182,9 +180,9 @@ const handleDelete = (todo: Todo) => {
     </section>
     <footer class="footer" v-show="todos.total">
       <span class="todo-count">
-        <strong>{{ getByDone(false).length > 0 }}</strong>
+        <strong>{{ filterByDone(false).length }}</strong>
         <span>
-          {{ getByDone(false).length === 1 ? " item" : " items" }} left</span
+          {{ filterByDone(false).length === 1 ? " item" : " items" }} left</span
         >
       </span>
       <ul class="filters">
@@ -200,8 +198,8 @@ const handleDelete = (todo: Todo) => {
       </ul>
       <button
         class="clear-completed"
-        @click="() => {}"
-        v-show="todos.items.length > getByDone(false).length"
+        @click="() => filterByDone(true).map((todo) => handleDelete(todo))"
+        v-show="todos.items.length > filterByDone(false).length"
       >
         Clear completed
       </button>
