@@ -2,6 +2,7 @@
 import axios from "axios";
 import type { Todo, TodoList } from "../types";
 import { computed, onMounted, ref } from "vue";
+import Logo from "../assets/logo.png";
 
 const http = axios.create({
   baseURL: "/",
@@ -131,7 +132,10 @@ const handleDelete = (todo: Todo) => {
 <template>
   <section class="todoapp">
     <header class="header">
-      <h1>todos</h1>
+      <h1>
+        <img :src="Logo" alt="logo" style="display: inline; width: 64px" />
+        todos
+      </h1>
       <input
         class="new-todo"
         autofocus
