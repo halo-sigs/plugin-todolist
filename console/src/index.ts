@@ -1,8 +1,8 @@
 import { definePlugin } from "@halo-dev/console-shared";
 import DefaultView from "./views/DefaultView.vue";
-import { IconGrid } from "@halo-dev/components";
 import "./styles/index.css";
 import { markRaw } from "vue";
+import VscodeIconsFileTypeLightTodo from "~icons/vscode-icons/file-type-light-todo";
 
 export default definePlugin({
   name: "plugin-hello-world",
@@ -23,7 +23,7 @@ export default definePlugin({
               menu: {
                 name: "Todo List",
                 group: "工具",
-                icon: markRaw(IconGrid),
+                icon: markRaw(VscodeIconsFileTypeLightTodo),
                 priority: 0,
               },
             },
