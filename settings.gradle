@@ -8,5 +8,5 @@ pluginManagement {
     }
 }
 // 项目名称
-rootProject.name = 'halo-plugin-hello-world'
+rootProject.name = 'plugin-todolist'
 
